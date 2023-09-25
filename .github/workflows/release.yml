@@ -1,9 +1,11 @@
 name: Create Maven Release
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       version:
         description: "Version number"
+        required: true
+        type: string        
 jobs:
   maven-release:
     runs-on: ubuntu-latest
