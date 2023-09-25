@@ -1,4 +1,4 @@
-name: Create Maven Release
+name: Maven Release Template
 on:
   workflow_call:
     inputs:
