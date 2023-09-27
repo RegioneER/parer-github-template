@@ -1,22 +1,23 @@
 name: Maven Compile Template
 on:
   workflow_call:
-    secrets:
-      env_vars:
+    inputs:
+      java:
+        description: 'Java version'
+        default: '8'
         required: true
-env:
-  env_vars: ${{ secrets.env_vars }}        
+        type: string
 jobs:
   maven-compile:
     runs-on: ubuntu-latest
     steps:
       - name: Check env 
-        run: echo $JAVA_VERSION
+        run: echo ${{ inputs.java }}
       - uses: actions/checkout@v3
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '$JAVA_VERSION'
+          java-version: '${{ inputs.java }}'
           cache: 'maven'
           server-id: 'github' # Value of the distributionManagement/repository/id field of the pom.xml
       - name: Check maven 
