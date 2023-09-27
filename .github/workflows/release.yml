@@ -7,7 +7,12 @@ on:
       version:
         description: "Version number"
         required: true
-        type: string        
+        type: string
+      java_version:
+        description: "Java version"
+        required: false
+        type: string
+        default: '8'
 jobs:
   maven-release:
     runs-on: ubuntu-latest
@@ -16,7 +21,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '$JAVA_VERSION'
+          java-version: '{{ inputs.java_version }}'
           cache: 'maven'
           server-id: 'github' # Value of the distributionManagement/repository/id field of the pom.xml
       - name: Check maven 
