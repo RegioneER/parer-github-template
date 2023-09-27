@@ -4,6 +4,8 @@ on:
     secrets:
       env_vars:
         required: true
+env:
+  env_vars: ${{ secrets.env_vars }}        
 jobs:
   maven-compile:
     runs-on: ubuntu-latest
