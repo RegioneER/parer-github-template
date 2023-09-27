@@ -1,4 +1,6 @@
 name: Maven Release Template
+env:
+  JAVA_VERSION: '8'
 on:
   workflow_call:
     inputs:
@@ -14,7 +16,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '$JAVA_VERSION'
           cache: 'maven'
           server-id: 'github' # Value of the distributionManagement/repository/id field of the pom.xml
       - name: Check maven 
