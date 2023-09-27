@@ -1,8 +1,7 @@
 name: Maven Compile Template
 env:
   JAVA_VERSION: '8'
-on:
-  push
+on: workflow_call
 jobs:
   maven-build:
     runs-on: ubuntu-latest
