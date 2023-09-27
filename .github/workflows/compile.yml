@@ -1,9 +1,8 @@
 name: Maven Compile Template
 on:
   workflow_call:
-    secrets:
-      env_vars:
-        required: true
+    env_vars:
+       required: true
 jobs:
   maven-compile:
     runs-on: ubuntu-latest
