@@ -3,7 +3,7 @@ env:
   JAVA_VERSION: '8'
 on: workflow_call
 jobs:
-  maven-build:
+  maven-compile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
