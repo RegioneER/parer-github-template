@@ -4,8 +4,7 @@ on:
     inputs:
       java:
         description: 'Java version'
-        default: '8'
-        required: false
+        required: true
         type: string
 jobs:
   maven-compile:
