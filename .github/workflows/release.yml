@@ -8,9 +8,8 @@ on:
         type: string
       java:
         description: "Java version"
-        required: false
+        required: true
         type: string
-        default: '8'
 jobs:
   maven-release:
     runs-on: ubuntu-latest
