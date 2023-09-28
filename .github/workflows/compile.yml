@@ -20,6 +20,6 @@ jobs:
       - name: Check maven 
         run: java -version && mvn -version && cat /home/runner/.m2/settings.xml
       - name: Compile with maven
-        run: mvn clean compile -DskipTests=true
+        run: mvn clean install -DskipTests=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
