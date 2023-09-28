@@ -8,7 +8,7 @@ on:
         type: string
       java:
         description: "Java version"
-        required: true
+        required: false
         type: string
         default: '8'
 jobs:
