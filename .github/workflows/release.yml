@@ -35,4 +35,4 @@ jobs:
         if: github.ref_name != github.event.repository.default_branch # Not on default branch
         run: mvn -DskipTests -Dmaven.test.skip=true -B -Dresume=false release:prepare release:perform -Darguments=-DskipTests -Dmaven.test.skip=true -Dmaven.site.skip=true -Dmaven.site.deploy.skip=true  -DreleaseVersion=${{ inputs.version }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
