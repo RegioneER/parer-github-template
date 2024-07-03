@@ -1,9 +1,10 @@
 name: GitHub Release Template
 on:
-  push:
-    # Pattern matched against refs/tags
-    tags:        
-      - '*' # every new tag
+  workflow_call:
+    push:
+      # Pattern matched against refs/tags
+      tags:        
+        - '*' # every new tag
 jobs:
   github-release:
     runs-on: ubuntu-latest
