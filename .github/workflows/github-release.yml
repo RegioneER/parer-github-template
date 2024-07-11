@@ -8,9 +8,16 @@ jobs:
         uses: actions/checkout@v2
       - name: Get latest tag
         run: |
+         # fetch all tags
          git fetch --tags
-         echo "LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))" >> $GITHUB_ENV
-         echo "GITHUB_REL_NAME=$(echo v${LATEST_TAG##*-})" >> $GITHUB_ENV
+         
+         # create variables
+         LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+         GITHUB_REL_NAME=$(echo v${LATEST_TAG##*-})
+         
+         # echo VAR=$VAL on GITHUB_ENV
+         echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+         echo "GITHUB_REL_NAME=$GITHUB_REL_NAME" >> $GITHUB_ENV
       - name: Create Release
         uses: actions/create-release@v1
         env:
