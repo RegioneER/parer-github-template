@@ -18,9 +18,11 @@ jobs:
           java-version: '${{ inputs.java }}'
           cache: 'maven'
           server-id: 'github' # Value of the distributionManagement/repository/id field of the pom.xml
-      - name: Check maven 
+      - name: Check maven
+        if: ${{ hashFiles('pom.xml') != '' }}       
         run: java -version && mvn -version && cat /home/runner/.m2/settings.xml
       - name: Compile with maven
+        if: ${{ hashFiles('pom.xml') != '' }}      
         run: mvn clean install -DskipTests=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
