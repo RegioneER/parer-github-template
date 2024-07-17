@@ -18,9 +18,10 @@ jobs:
          # echo VAR=$VAL on GITHUB_ENV
          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
          echo "GITHUB_REL_NAME=$GITHUB_REL_NAME" >> $GITHUB_ENV
-      - name: Create Release
+      - name: Create Release with description
         uses: actions/create-release@v1
-        env:
+        if: ${{ hashFiles('RELEASE-NOTES.md') != '' }} # if RELEASE-NOTES.md exists
+        env
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
           tag_name: ${{ env.LATEST_TAG }} # tag name (see run script)
@@ -28,3 +29,13 @@ jobs:
           body_path: RELEASE-NOTES.md # default RELEASE-NOTES document
           draft: false # default
           prerelease: false # default
+      - name: Create Release standard
+        uses: actions/create-release@v1
+        if: ${{ hashFiles('RELEASE-NOTES.md') == '' }} # if RELEASE-NOTES.md NOT exists              
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ env.LATEST_TAG }} # tag name (see run script)
+          release_name: ${{ env.GITHUB_REL_NAME }} # release name (see run script)
+          draft: false # default
+          prerelease: false # default          
