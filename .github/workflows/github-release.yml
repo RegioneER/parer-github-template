@@ -21,7 +21,7 @@ jobs:
       - name: Create Release with description
         uses: actions/create-release@v1
         if: ${{ hashFiles('RELEASE-NOTES.md') != '' }} # if RELEASE-NOTES.md exists
-        env
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
           tag_name: ${{ env.LATEST_TAG }} # tag name (see run script)
