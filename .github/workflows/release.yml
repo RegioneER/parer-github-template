@@ -38,6 +38,7 @@ jobs:
         run: |
           mvn versions:set -DnewVersion=${{ inputs.version }}-SNAPSHOT
           git clean -f
+          git add .
       - name: Release with maven
         if: ${{ hashFiles('pom.xml') != '' }} && github.ref_name != github.event.repository.default_branch # Not on default branch / only for pom.xml (maven project)
         run: mvn -DskipTests -Dmaven.test.skip=true -B -Dresume=false release:prepare release:perform -Darguments=-DskipTests -Dmaven.test.skip=true -Dmaven.site.skip=true -Dmaven.site.deploy.skip=true  -DreleaseVersion=${{ inputs.version }}
