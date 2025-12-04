@@ -1,5 +1,5 @@
-on: [pull_request]
-
+name: AgiD Public code validation
+on: workflow_call
 jobs:
   publiccode_validation:
     runs-on: ubuntu-latest
