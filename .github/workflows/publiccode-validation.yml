@@ -7,7 +7,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
     - name: Add safe.directory for git
-      run: git config --global --add safe.directory /github/workspace    
+      run: git config --global --add safe.directory $GITHUB_WORKSPACE 
     - uses: italia/publiccode-parser-action@v1.4.3
       with:
         publiccode: 'publiccode.yml' # relative path to your publiccode.yml
