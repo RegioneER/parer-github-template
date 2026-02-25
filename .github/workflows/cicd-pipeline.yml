@@ -29,6 +29,7 @@ on:
 jobs:
   check-commit-message:
     runs-on: ubuntu-latest
+    name: Check Commit Message    
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
@@ -58,6 +59,7 @@ jobs:
     needs: check-commit-message
     if: needs.check-commit-message.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    name: Maven Compile
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,6 +85,7 @@ jobs:
     needs: maven-compile
     if: success() && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
+    name: Maven Release
     outputs:
       release_version: ${{ steps.extract_version.outputs.version }}
     steps:
@@ -173,7 +176,7 @@ jobs:
           
           # create variables
           LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v0.0.1")
-          GITHUB_REL_NAME=$(echo ${LATEST_TAG})
+          GITHUB_REL_NAME=$(echo v${LATEST_TAG##*-})
           
           # echo VAR=$VAL on GITHUB_OUTPUT
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
@@ -184,7 +187,7 @@ jobs:
         if: ${{ hashFiles('RELEASE-NOTES.md') != '' }}
         with:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
-          name: Release ${{ steps.get_tag.outputs.release_name }}
+          name: v${{ steps.get_tag.outputs.release_name }}
           body_path: RELEASE-NOTES.md
           token: ${{ secrets.GITHUB_TOKEN }}
       
