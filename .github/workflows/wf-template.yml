@@ -1,4 +1,4 @@
-name: ParER Standard Workflow Template
+name: ParER Workflow Template
 on:
   workflow_call:
     inputs:
