@@ -29,7 +29,7 @@ on:
 jobs:
   check-commit-message:
     runs-on: ubuntu-latest
-    name: Check Commit Message    
+    name: Verify Commit Message    
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
@@ -59,7 +59,7 @@ jobs:
     needs: check-commit-message
     if: needs.check-commit-message.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    name: Maven Compile
+    name: Compile with Maven
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,7 +85,7 @@ jobs:
     needs: maven-compile
     if: success() && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
-    name: Maven Release
+    name: Release with Maven
     outputs:
       release_version: ${{ steps.extract_version.outputs.version }}
     steps:
@@ -157,6 +157,7 @@ jobs:
     needs: maven-release
     if: success()
     runs-on: ubuntu-latest
+    name: Create GitHub Realese
     outputs:
       latest_tag: ${{ steps.get_tag.outputs.latest_tag }}
       release_name: ${{ steps.get_tag.outputs.release_name }}
@@ -196,14 +197,14 @@ jobs:
         if: ${{ hashFiles('RELEASE-NOTES.md') == '' }}
         with:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
-          name: v${{ steps.get_tag.outputs.release_name }}
+          name: ${{ steps.get_tag.outputs.release_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   publiccode-validation:
     needs: github-release
     if: success() && inputs.run-publiccode-validation == true
     runs-on: ubuntu-latest
-    name: Publiccode validation
+    name: AgiD Publiccode validation
     steps:
       - uses: actions/checkout@v4
         with:
