@@ -21,6 +21,10 @@ on:
         required: false
         type: boolean
         default: true
+    secrets:
+      CI_PARERWORKER_RW_TOKEN:
+        description: 'Token for parerworker user to bypass branch protection'
+        required: true
 
 jobs:
   check-commit-message:
@@ -85,7 +89,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # USA IL TOKEN DELL'UTENTE PARERWORK QUI (con privilegi per bypassare le protezioni)
+          # USA IL TOKEN DELL'UTENTE PARERWORKER QUI (con privilegi per bypassare le protezioni)
           token: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
       
       - name: Check if pom.xml exists
@@ -126,10 +130,8 @@ jobs:
           git config user.email "DevPARER@regione.emilia-romagna.it"
           git config user.name "parerworker"
           
-          # Configura git per usare il token di parerwork per l'autenticazione
+          # Configura git per usare il token di parerworker per l'autenticazione
           git remote set-url origin https://x-access-token:${{ secrets.CI_PARERWORKER_RW_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git
-        env:
-          CI_PARERWORKER_RW_TOKEN: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
       
       - name: Set SNAPSHOT version
         if: steps.check_pom.outputs.exists == 'true'
