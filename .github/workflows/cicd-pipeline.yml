@@ -1,4 +1,4 @@
-name: CI/CD Pipeline Template
+name: ParER Standard Workflow Template
 on:
   workflow_call:
     inputs:
