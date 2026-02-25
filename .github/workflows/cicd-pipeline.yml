@@ -25,13 +25,14 @@ on:
 jobs:
   check-commit-message:
     runs-on: ubuntu-latest
-    name: Check Commit Message
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Usa GITHUB_TOKEN standard (nessun privilegio speciale)
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check commit message
         id: check
         run: |
@@ -53,9 +54,11 @@ jobs:
     needs: check-commit-message
     if: needs.check-commit-message.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    name: Maven Compile
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Usa GITHUB_TOKEN standard
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-java@v4
         if: ${{ hashFiles('pom.xml') != '' }}      
         with:
@@ -76,14 +79,14 @@ jobs:
     needs: maven-compile
     if: success() && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
-    name: Maven Release
     outputs:
       release_version: ${{ steps.extract_version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # USA IL TOKEN DELL'UTENTE PARERWORK QUI (con privilegi per bypassare le protezioni)
+          token: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
       
       - name: Check if pom.xml exists
         id: check_pom
@@ -115,13 +118,18 @@ jobs:
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
       
       - name: Configure Git user
         if: steps.check_pom.outputs.exists == 'true'
         run: |
-          git config user.email "actions@github.com"
-          git config user.name "GitHub Actions"
+          git config user.email "DevPARER@regione.emilia-romagna.it"
+          git config user.name "parerworker"
+          
+          # Configura git per usare il token di parerwork per l'autenticazione
+          git remote set-url origin https://x-access-token:${{ secrets.CI_PARERWORKER_RW_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git
+        env:
+          CI_PARERWORKER_RW_TOKEN: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
       
       - name: Set SNAPSHOT version
         if: steps.check_pom.outputs.exists == 'true'
@@ -132,7 +140,7 @@ jobs:
           git add .
           git commit -m "${{ inputs.commit-message-prefix }} ${{ steps.extract_version.outputs.version }}" || echo "No changes to commit"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
+          GITHUB_TOKEN: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}          
       
       - name: Release with maven
         if: steps.check_pom.outputs.exists == 'true'
@@ -144,7 +152,6 @@ jobs:
     needs: maven-release
     if: success()
     runs-on: ubuntu-latest
-    name: GitHub Release
     outputs:
       latest_tag: ${{ steps.get_tag.outputs.latest_tag }}
       release_name: ${{ steps.get_tag.outputs.release_name }}
@@ -153,6 +160,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Usa GITHUB_TOKEN standard
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Get latest tag
         id: get_tag
@@ -192,6 +201,9 @@ jobs:
     name: Publiccode validation
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Usa GITHUB_TOKEN standard
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Check if publiccode.yml exists
         id: check_publiccode
