@@ -189,7 +189,7 @@ jobs:
     needs: maven-release
     if: success()
     runs-on: ubuntu-latest
-    name: Create GitHub Realese
+    name: Create GitHub Release
     outputs:
       latest_tag: ${{ steps.get_tag.outputs.latest_tag }}
       release_name: ${{ steps.get_tag.outputs.release_name }}
