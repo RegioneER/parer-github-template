@@ -196,7 +196,7 @@ jobs:
         if: ${{ hashFiles('RELEASE-NOTES.md') == '' }}
         with:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
-          name: Release ${{ steps.get_tag.outputs.release_name }}
+          name: v${{ steps.get_tag.outputs.release_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   publiccode-validation:
