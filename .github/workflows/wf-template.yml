@@ -220,7 +220,7 @@ jobs:
         if: ${{ hashFiles('RELEASE-NOTES.md') != '' }}
         with:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
-          name: v${{ steps.get_tag.outputs.release_name }}
+          name: ${{ steps.get_tag.outputs.release_name }}
           body_path: RELEASE-NOTES.md
           token: ${{ secrets.GITHUB_TOKEN }}
       
