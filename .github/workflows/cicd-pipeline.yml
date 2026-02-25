@@ -72,22 +72,40 @@ jobs:
 
   maven-release:
     needs: maven-compile
-    if: success() && hashFiles('pom.xml') != '' && github.ref_name == github.event.repository.default_branch
+    if: success() && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.extract_version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-java@v4      
+      
+      - name: Check if pom.xml exists
+        id: check_pom
+        run: |
+          if [ -f "pom.xml" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "pom.xml not found, skipping maven release"
+          fi
+      
+      - uses: actions/setup-java@v4
+        if: steps.check_pom.outputs.exists == 'true'      
         with:
           distribution: 'temurin'
           java-version: '${{ inputs.java }}'
           cache: 'maven'
           server-id: 'github'
+      
       - name: Check maven
+        if: steps.check_pom.outputs.exists == 'true'       
         run: java -version && mvn -version && cat /home/runner/.m2/settings.xml
+      
       - name: Extract version from pom.xml
+        if: steps.check_pom.outputs.exists == 'true'
         id: extract_version
         run: |
           # Extract version from pom.xml, remove -SNAPSHOT if present
@@ -95,11 +113,15 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Configure Git user
+        if: steps.check_pom.outputs.exists == 'true'
         run: |
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
+      
       - name: Set SNAPSHOT version
+        if: steps.check_pom.outputs.exists == 'true'
         continue-on-error: true
         run: |
           mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}-SNAPSHOT
@@ -108,7 +130,9 @@ jobs:
           git commit -m "${{ inputs.commit-message-prefix }} ${{ steps.extract_version.outputs.version }}" || echo "No changes to commit"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
+      
       - name: Release with maven
+        if: steps.check_pom.outputs.exists == 'true'
         run: mvn -DskipTests -Dmaven.test.skip=true -B -Dresume=false release:prepare release:perform -Darguments=-DskipTests -Dmaven.test.skip=true -Dmaven.site.skip=true -Dmaven.site.deploy.skip=true -DreleaseVersion=${{ steps.extract_version.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -117,12 +141,17 @@ jobs:
     needs: maven-release
     if: success()
     runs-on: ubuntu-latest
+    outputs:
+      latest_tag: ${{ steps.get_tag.outputs.latest_tag }}
+      release_name: ${{ steps.get_tag.outputs.release_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      
       - name: Get latest tag
+        id: get_tag
         run: |
           # fetch all tags
           git fetch --tags
@@ -131,23 +160,25 @@ jobs:
           LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v0.0.1")
           GITHUB_REL_NAME=$(echo ${LATEST_TAG})
           
-          # echo VAR=$VAL on GITHUB_ENV
-          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
-          echo "GITHUB_REL_NAME=$GITHUB_REL_NAME" >> $GITHUB_ENV
+          # echo VAR=$VAL on GITHUB_OUTPUT
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "release_name=$GITHUB_REL_NAME" >> $GITHUB_OUTPUT
+      
       - name: Create Release with description
         uses: softprops/action-gh-release@v1
         if: ${{ hashFiles('RELEASE-NOTES.md') != '' }}
         with:
-          tag_name: ${{ env.LATEST_TAG }}
-          name: Release ${{ env.GITHUB_REL_NAME }}
+          tag_name: ${{ steps.get_tag.outputs.latest_tag }}
+          name: Release ${{ steps.get_tag.outputs.release_name }}
           body_path: RELEASE-NOTES.md
           token: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Create Release standard
         uses: softprops/action-gh-release@v1
         if: ${{ hashFiles('RELEASE-NOTES.md') == '' }}
         with:
-          tag_name: ${{ env.LATEST_TAG }}
-          name: Release ${{ env.GITHUB_REL_NAME }}
+          tag_name: ${{ steps.get_tag.outputs.latest_tag }}
+          name: Release ${{ steps.get_tag.outputs.release_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   publiccode-validation:
@@ -157,9 +188,23 @@ jobs:
     name: Publiccode validation
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Check if publiccode.yml exists
+        id: check_publiccode
+        run: |
+          if [ -f "${{ inputs.publiccode-file }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "publiccode.yml not found, skipping validation"
+          fi
+      
       - name: Add safe.directory for git
+        if: steps.check_publiccode.outputs.exists == 'true'
         run: git config --global --add safe.directory $GITHUB_WORKSPACE 
+      
       - uses: italia/publiccode-parser-action@v1.4.3
+        if: steps.check_publiccode.outputs.exists == 'true'
         with:
           publiccode: ${{ inputs.publiccode-file }}
           comment-on-pr: true
