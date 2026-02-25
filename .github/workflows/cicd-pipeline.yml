@@ -27,6 +27,38 @@ on:
         required: true
 
 jobs:
+  publiccode-validation:
+    if: inputs.run-publiccode-validation == true
+    runs-on: ubuntu-latest
+    name: AgiD Publiccode validation
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Usa GITHUB_TOKEN standard
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Check if publiccode.yml exists
+        id: check_publiccode
+        run: |
+          if [ -f "${{ inputs.publiccode-file }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "publiccode.yml not found, skipping validation"
+          fi
+      
+      - name: Add safe.directory for git
+        if: steps.check_publiccode.outputs.exists == 'true'
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE 
+      
+      - uses: italia/publiccode-parser-action@v1.4.3
+        if: steps.check_publiccode.outputs.exists == 'true'
+        with:
+          publiccode: ${{ inputs.publiccode-file }}
+          comment-on-pr: true
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   check-commit-message:
     runs-on: ubuntu-latest
     name: Verify Commit Message    
@@ -199,36 +231,3 @@ jobs:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
           name: ${{ steps.get_tag.outputs.release_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
-
-  publiccode-validation:
-    needs: github-release
-    if: success() && inputs.run-publiccode-validation == true
-    runs-on: ubuntu-latest
-    name: AgiD Publiccode validation
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # Usa GITHUB_TOKEN standard
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Check if publiccode.yml exists
-        id: check_publiccode
-        run: |
-          if [ -f "${{ inputs.publiccode-file }}" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "publiccode.yml not found, skipping validation"
-          fi
-      
-      - name: Add safe.directory for git
-        if: steps.check_publiccode.outputs.exists == 'true'
-        run: git config --global --add safe.directory $GITHUB_WORKSPACE 
-      
-      - uses: italia/publiccode-parser-action@v1.4.3
-        if: steps.check_publiccode.outputs.exists == 'true'
-        with:
-          publiccode: ${{ inputs.publiccode-file }}
-          comment-on-pr: true
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
