@@ -110,6 +110,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   maven-release:
+    environment: CI
     needs: maven-compile
     if: success() && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
