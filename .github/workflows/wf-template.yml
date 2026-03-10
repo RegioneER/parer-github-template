@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     name: AgiD Publiccode validation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Usa GITHUB_TOKEN standard
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -65,7 +65,7 @@ jobs:
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           # Usa GITHUB_TOKEN standard (nessun privilegio speciale)
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Compile with Maven
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Usa GITHUB_TOKEN standard
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -121,7 +121,7 @@ jobs:
     outputs:
       release_version: ${{ steps.extract_version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           # USA IL TOKEN DELL'UTENTE PARERWORKER QUI (con privilegi per bypassare le protezioni)
@@ -195,7 +195,7 @@ jobs:
       release_name: ${{ steps.get_tag.outputs.release_name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           # Usa GITHUB_TOKEN standard
