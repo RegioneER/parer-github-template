@@ -21,10 +21,6 @@ on:
         required: false
         type: boolean
         default: true
-    secrets:
-      CI_PARERWORKER_RW_TOKEN:
-        description: 'Token for parerworker user to bypass branch protection'
-        required: true
 
 jobs:
   publiccode-validation:
