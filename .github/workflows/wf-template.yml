@@ -25,7 +25,12 @@ on:
         description: 'Environment name to use for secrets'
         required: false
         type: string
-        default: 'CI'        
+        default: 'CI'
+    secrets:
+      CI_PARERWORKER_RW_TOKEN:
+        description: 'Token for parerworker user to bypass branch protection'
+        required: true        
+
 
 jobs:
   publiccode-validation:
