@@ -1,0 +1,234 @@
+name: ParER Workflow Template
+on:
+  workflow_call:
+    inputs:
+      java:
+        description: 'Java version'
+        required: true
+        type: string
+      commit-message-prefix:
+        description: 'Commit message prefix to trigger the release pipeline'
+        required: false
+        type: string
+        default: 'Update project to latest tag'
+      publiccode-file:
+        description: 'Path to publiccode.yml file'
+        required: false
+        type: string
+        default: 'publiccode.yml'
+      run-publiccode-validation:
+        description: 'Whether to run publiccode validation'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      CI_PARERWORKER_RW_TOKEN:
+        description: 'Token for parerworker user to bypass branch protection'
+        required: true        
+
+
+jobs:
+  publiccode-validation:
+    if: inputs.run-publiccode-validation == true
+    runs-on: ubuntu-latest
+    name: AgiD Publiccode validation
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Usa GITHUB_TOKEN standard
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Check if publiccode.yml exists
+        id: check_publiccode
+        run: |
+          if [ -f "${{ inputs.publiccode-file }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "publiccode.yml not found, skipping validation"
+          fi
+      
+      - name: Add safe.directory for git
+        if: steps.check_publiccode.outputs.exists == 'true'
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE 
+      
+      - uses: italia/publiccode-parser-action@v1.4.3
+        if: steps.check_publiccode.outputs.exists == 'true'
+        with:
+          publiccode: ${{ inputs.publiccode-file }}
+          comment-on-pr: false
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  check-commit-message:
+    runs-on: ubuntu-latest
+    name: Verify Commit Message    
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          # Usa GITHUB_TOKEN standard (nessun privilegio speciale)
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check commit message
+        id: check
+        run: |
+          # Get the latest commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+          echo "Looking for prefix: ${{ inputs.commit-message-prefix }}"
+          
+          # Check if commit message starts with the specified prefix
+          if [[ "$COMMIT_MSG" == "${{ inputs.commit-message-prefix }}"* ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "Condition met - commit message starts with '${{ inputs.commit-message-prefix }}'"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "Condition not met - commit message does not start with '${{ inputs.commit-message-prefix }}'"
+          fi
+
+  maven-compile:
+    needs: check-commit-message
+    if: needs.check-commit-message.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    name: Compile with Maven
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Usa GITHUB_TOKEN standard
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-java@v4
+        if: ${{ hashFiles('pom.xml') != '' }}      
+        with:
+          distribution: 'temurin'
+          java-version: '${{ inputs.java }}'
+          cache: 'maven'
+          server-id: 'github'
+      - name: Check maven
+        if: ${{ hashFiles('pom.xml') != '' }}       
+        run: java -version && mvn -version && cat /home/runner/.m2/settings.xml
+      - name: Compile with maven
+        if: ${{ hashFiles('pom.xml') != '' }}      
+        run: mvn clean install -DskipTests=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  maven-release:
+    needs: maven-compile
+    if: success() && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    name: Release with Maven
+    outputs:
+      release_version: ${{ steps.extract_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          # USA IL TOKEN DELL'UTENTE PARERWORKER QUI (con privilegi per bypassare le protezioni)
+          token: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
+      
+      - name: Check if pom.xml exists
+        id: check_pom
+        run: |
+          if [ -f "pom.xml" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "pom.xml not found, skipping maven release"
+          fi
+      
+      - uses: actions/setup-java@v4
+        if: steps.check_pom.outputs.exists == 'true'      
+        with:
+          distribution: 'temurin'
+          java-version: '${{ inputs.java }}'
+          cache: 'maven'
+          server-id: 'github'
+      
+      - name: Check maven
+        if: steps.check_pom.outputs.exists == 'true'       
+        run: java -version && mvn -version && cat /home/runner/.m2/settings.xml
+      
+      - name: Extract version from pom.xml
+        if: steps.check_pom.outputs.exists == 'true'
+        id: extract_version
+        run: |
+          # Extract version from pom.xml, remove -SNAPSHOT if present
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
+      
+      - name: Configure Git user
+        if: steps.check_pom.outputs.exists == 'true'
+        run: |
+          git config user.email "DevPARER@regione.emilia-romagna.it"
+          git config user.name "parerworker"
+          
+          # Configura git per usare il token di parerworker per l'autenticazione
+          git remote set-url origin https://x-access-token:${{ secrets.CI_PARERWORKER_RW_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git
+      
+      - name: Set SNAPSHOT version
+        if: steps.check_pom.outputs.exists == 'true'
+        continue-on-error: true
+        run: |
+          mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}-SNAPSHOT
+          git clean -f
+          git add .
+          git commit -m "${{ inputs.commit-message-prefix }} ${{ steps.extract_version.outputs.version }}" || echo "No changes to commit"
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}          
+      
+      - name: Release with maven
+        if: steps.check_pom.outputs.exists == 'true'
+        run: mvn -DskipTests -Dmaven.test.skip=true -B -Dresume=false release:prepare release:perform -Darguments=-DskipTests -Dmaven.test.skip=true -Dmaven.site.skip=true -Dmaven.site.deploy.skip=true -DreleaseVersion=${{ steps.extract_version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
+
+  github-release:
+    needs: maven-release
+    if: success()
+    runs-on: ubuntu-latest
+    name: Create GitHub Release
+    outputs:
+      latest_tag: ${{ steps.get_tag.outputs.latest_tag }}
+      release_name: ${{ steps.get_tag.outputs.release_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          # Usa GITHUB_TOKEN standard
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          # fetch all tags
+          git fetch --tags
+          
+          # create variables
+          LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v0.0.1")
+          GITHUB_REL_NAME=$(echo v${LATEST_TAG##*-})
+          
+          # echo VAR=$VAL on GITHUB_OUTPUT
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "release_name=$GITHUB_REL_NAME" >> $GITHUB_OUTPUT
+      
+      - name: Create Release with description
+        uses: softprops/action-gh-release@v1
+        if: ${{ hashFiles('RELEASE-NOTES.md') != '' }}
+        with:
+          tag_name: ${{ steps.get_tag.outputs.latest_tag }}
+          name: ${{ steps.get_tag.outputs.release_name }}
+          body_path: RELEASE-NOTES.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Release standard
+        uses: softprops/action-gh-release@v1
+        if: ${{ hashFiles('RELEASE-NOTES.md') == '' }}
+        with:
+          tag_name: ${{ steps.get_tag.outputs.latest_tag }}
+          name: ${{ steps.get_tag.outputs.release_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
