@@ -21,11 +21,6 @@ on:
         required: false
         type: boolean
         default: true
-      environment:
-        description: 'Environment name to use for secrets'
-        required: false
-        type: string
-        default: 'CI'
     secrets:
       CI_PARERWORKER_RW_TOKEN:
         description: 'Token for parerworker user to bypass branch protection'
@@ -124,7 +119,6 @@ jobs:
     if: success() && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     name: Release with Maven
-    environment: ${{ inputs.environment }}    
     outputs:
       release_version: ${{ steps.extract_version.outputs.version }}
     steps:
