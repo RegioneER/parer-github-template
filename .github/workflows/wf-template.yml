@@ -92,14 +92,12 @@ jobs:
     needs: check-commit-message
     if: needs.check-commit-message.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    attempt_limit: 2 # retry max 2 times
-    attempt_delay: 2000  # delay
     name: Compile with Maven
     steps:
       - uses: actions/checkout@v6
         with:
-          # Usa GITHUB_TOKEN standard
           token: ${{ secrets.GITHUB_TOKEN }}
+      
       - uses: actions/setup-java@v5
         if: ${{ hashFiles('pom.xml') != '' }}      
         with:
@@ -107,12 +105,19 @@ jobs:
           java-version: '${{ inputs.java }}'
           cache: 'maven'
           server-id: 'github'
+      
       - name: Check maven
         if: ${{ hashFiles('pom.xml') != '' }}       
         run: java -version && mvn -version && cat /home/runner/.m2/settings.xml
-      - name: Compile with maven
+      
+      - name: Compile with maven with retry
         if: ${{ hashFiles('pom.xml') != '' }}      
-        run: mvn clean install -DskipTests=true
+        uses: nick-fields/retry@v3  # use retry in case of failure
+        with:
+          timeout_minutes: 10 # max timeout
+          max_attempts: 2 # max 2 retry
+          retry_wait_seconds: 20 # max delay until next
+          command: mvn clean install -DskipTests=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
