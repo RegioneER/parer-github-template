@@ -112,7 +112,7 @@ jobs:
       
       - name: Compile with maven with retry
         if: ${{ hashFiles('pom.xml') != '' }}      
-        uses: nick-fields/retry@v3  # use retry in case of failure
+        uses: nick-fields/retry@v4  # use retry in case of failure
         with:
           timeout_minutes: 20 # max timeout
           max_attempts: 2 # max 2 retry
@@ -224,7 +224,7 @@ jobs:
           echo "release_name=$GITHUB_REL_NAME" >> $GITHUB_OUTPUT
       
       - name: Create Release with description
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: ${{ hashFiles('RELEASE-NOTES.md') != '' }}
         with:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
@@ -233,7 +233,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Create Release standard
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: ${{ hashFiles('RELEASE-NOTES.md') == '' }}
         with:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
