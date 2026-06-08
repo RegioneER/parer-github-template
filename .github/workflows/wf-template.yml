@@ -128,6 +128,7 @@ jobs:
     name: Release with Maven
     outputs:
       release_version: ${{ steps.extract_version.outputs.version }}
+      artifacts_uploaded: ${{ steps.upload_artifacts.outcome == 'success' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -193,6 +194,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CI_PARERWORKER_RW_TOKEN }}
 
+      - name: Upload build artifacts
+        id: upload_artifacts
+        if: steps.check_pom.outputs.exists == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-artifacts
+          path: |
+            **/target/*.war
+            **/target/*.ear
+            **/target/*.jar
+            !**/target/*-sources.jar
+            !**/target/*-javadoc.jar
+            !**/target/*-tests.jar
+          if-no-files-found: ignore
+
   github-release:
     needs: maven-release
     if: success()
@@ -223,6 +239,13 @@ jobs:
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "release_name=$GITHUB_REL_NAME" >> $GITHUB_OUTPUT
       
+      - name: Download build artifacts
+        if: needs.maven-release.outputs.artifacts_uploaded == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: build-artifacts
+          path: release-artifacts
+      
       - name: Create Release with description
         uses: softprops/action-gh-release@v3
         if: ${{ hashFiles('RELEASE-NOTES.md') != '' }}
@@ -231,6 +254,7 @@ jobs:
           name: ${{ steps.get_tag.outputs.release_name }}
           body_path: RELEASE-NOTES.md
           token: ${{ secrets.GITHUB_TOKEN }}
+          files: release-artifacts/**
       
       - name: Create Release standard
         uses: softprops/action-gh-release@v3
@@ -239,3 +263,4 @@ jobs:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
           name: ${{ steps.get_tag.outputs.release_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          files: release-artifacts/**
