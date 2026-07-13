@@ -240,15 +240,27 @@ jobs:
           echo "release_name=$GITHUB_REL_NAME" >> $GITHUB_OUTPUT
       
       - name: Download build artifacts
-        if: needs.maven-release.outputs.artifacts_uploaded == 'true'
+        id: download_artifacts
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: build-artifacts
           path: release-artifacts
       
+      - name: Check if artifacts were downloaded
+        id: check_artifacts
+        run: |
+          if [ -d "release-artifacts" ] && [ "$(ls -A release-artifacts 2>/dev/null)" ]; then
+            echo "artifacts_exist=true" >> $GITHUB_OUTPUT
+            echo "Artifacts found"
+          else
+            echo "artifacts_exist=false" >> $GITHUB_OUTPUT
+            echo "No artifacts to release"
+          fi
+      
       - name: Create Release with description
         uses: softprops/action-gh-release@v3
-        if: ${{ hashFiles('RELEASE-NOTES.md') != '' }}
+        if: ${{ hashFiles('RELEASE-NOTES.md') != '' && steps.check_artifacts.outputs.artifacts_exist == 'true' }}
         with:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
           name: ${{ steps.get_tag.outputs.release_name }}
@@ -258,9 +270,18 @@ jobs:
       
       - name: Create Release standard
         uses: softprops/action-gh-release@v3
-        if: ${{ hashFiles('RELEASE-NOTES.md') == '' }}
+        if: ${{ hashFiles('RELEASE-NOTES.md') == '' && steps.check_artifacts.outputs.artifacts_exist == 'true' }}
         with:
           tag_name: ${{ steps.get_tag.outputs.latest_tag }}
           name: ${{ steps.get_tag.outputs.release_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
           files: release-artifacts/**
+      
+      - name: Create Release without artifacts
+        uses: softprops/action-gh-release@v3
+        if: ${{ steps.check_artifacts.outputs.artifacts_exist == 'false' }}
+        with:
+          tag_name: ${{ steps.get_tag.outputs.latest_tag }}
+          name: ${{ steps.get_tag.outputs.release_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Non carica nessun file
